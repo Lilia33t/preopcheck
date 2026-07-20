@@ -1,0 +1,256 @@
+<!DOCTYPE html>
+<html lang="el">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, maximum-scale=1.0">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="theme-color" content="#0a1628">
+<link rel="manifest" href="manifest.json">
+<link rel="apple-touch-icon" href="icon-192.png">
+<title>Pre-Anaesthesia Checklist</title>
+<style>
+  :root{
+    --bg:#0a1628; --panel:#0f1f38; --panel2:#132844; --line:#1e3a5f;
+    --text:#e8eef7; --dim:#7d94b3; --accent:#22c3a6; --accent2:#4fb0ff;
+    --warn:#ffb648; --danger:#ff5d6c; --done:#22c3a6;
+  }
+  *{box-sizing:border-box; -webkit-tap-highlight-color:transparent;}
+  body{margin:0; background:var(--bg); color:var(--text);
+    font-family:-apple-system,BlinkMacSystemFont,"SF Pro Text",system-ui,sans-serif;
+    padding-bottom:100px; padding-top:env(safe-area-inset-top);}
+  header{position:sticky; top:0; z-index:10; background:linear-gradient(180deg,#0a1628 80%,transparent);
+    padding:14px 16px 8px; backdrop-filter:blur(6px);}
+  .toprow{display:flex; justify-content:space-between; align-items:center;}
+  h1{font-size:17px; margin:0; letter-spacing:.3px; font-weight:600;}
+  .sub{font-size:11px; color:var(--dim); margin-top:2px;}
+  .langbtn{background:var(--panel2); border:1px solid var(--line); color:var(--accent2);
+    padding:6px 10px; border-radius:8px; font-size:12px; font-weight:600;}
+  .progress-wrap{margin-top:12px; background:var(--panel); border-radius:10px; padding:10px 12px;
+    border:1px solid var(--line);}
+  .progress-bar{height:8px; background:#0a1628; border-radius:5px; overflow:hidden; margin-top:6px;}
+  .progress-fill{height:100%; background:linear-gradient(90deg,var(--accent2),var(--accent));
+    width:0%; transition:width .3s ease;}
+  .progress-label{display:flex; justify-content:space-between; font-size:11px; color:var(--dim);}
+  .progress-label b{color:var(--text);}
+  main{padding:10px 16px 0;}
+  .section{margin-top:16px; border:1px solid var(--line); border-radius:12px; overflow:hidden;
+    background:var(--panel);}
+  .section-head{display:flex; align-items:center; gap:10px; padding:12px 14px; cursor:pointer;
+    background:var(--panel2); user-select:none;}
+  .letter{width:30px; height:30px; border-radius:8px; background:#0a1628; border:1px solid var(--line);
+    display:flex; align-items:center; justify-content:center; font-weight:700; font-size:14px;
+    color:var(--accent2); flex-shrink:0;}
+  .section-title{flex:1;}
+  .section-title .name{font-size:14px; font-weight:600;}
+  .section-title .count{font-size:11px; color:var(--dim); margin-top:1px;}
+  .chevron{color:var(--dim); font-size:12px; transition:transform .2s;}
+  .section.open .chevron{transform:rotate(90deg);}
+  .items{max-height:0; overflow:hidden; transition:max-height .25s ease;}
+  .section.open .items{max-height:1000px;}
+  .item{display:flex; align-items:flex-start; gap:10px; padding:11px 14px; border-top:1px solid var(--line);}
+  .item.critical{background:rgba(255,93,108,0.06);}
+  .check{width:22px; height:22px; border-radius:6px; border:2px solid var(--line); flex-shrink:0;
+    margin-top:1px; display:flex; align-items:center; justify-content:center; font-size:13px;
+    color:transparent; transition:all .15s;}
+  .check.on{background:var(--done); border-color:var(--done); color:#0a1628; font-weight:800;}
+  .item-text{flex:1; font-size:13.5px; line-height:1.4;}
+  .item-text .tag{display:inline-block; font-size:9.5px; color:var(--danger); border:1px solid var(--danger);
+    border-radius:4px; padding:1px 5px; margin-left:6px; vertical-align:middle; font-weight:700;}
+  .item.done .item-text{color:var(--dim); text-decoration:line-through; text-decoration-color:var(--line);}
+  footer{position:fixed; bottom:0; left:0; right:0; background:linear-gradient(0deg,#0a1628 70%,transparent);
+    padding:10px 16px calc(14px + env(safe-area-inset-bottom));}
+  .footbtns{display:flex; gap:8px;}
+  button.reset{flex:1; background:var(--panel2); border:1px solid var(--line); color:var(--danger);
+    padding:12px; border-radius:10px; font-size:13px; font-weight:600;}
+  button.expand{flex:1; background:var(--panel2); border:1px solid var(--line); color:var(--accent2);
+    padding:12px; border-radius:10px; font-size:13px; font-weight:600;}
+  .ready-banner{display:none; margin:14px 16px 0; padding:12px 14px; border-radius:10px;
+    background:rgba(34,195,166,0.12); border:1px solid var(--accent); color:var(--accent);
+    font-size:13px; font-weight:600; text-align:center;}
+  .ready-banner.show{display:block;}
+</style>
+</head>
+<body>
+
+<header>
+  <div class="toprow">
+    <div>
+      <h1 id="title">Pre-Anaesthesia Checklist</h1>
+      <div class="sub" id="subtitle">MSMAIDS + Extended</div>
+    </div>
+    <button class="langbtn" id="langBtn" onclick="toggleLang()">EN</button>
+  </div>
+  <div class="progress-wrap">
+    <div class="progress-label"><span id="progLabel">Έλεγχοι</span> <b id="progCount">0 / 0</b></div>
+    <div class="progress-bar"><div class="progress-fill" id="progFill"></div></div>
+  </div>
+</header>
+
+<div class="ready-banner" id="readyBanner">✓ ΕΤΟΙΜΟ ΓΙΑ ΕΠΑΓΩΓΗ / READY FOR INDUCTION</div>
+
+<main id="sections"></main>
+
+<footer>
+  <div class="footbtns">
+    <button class="expand" id="expandBtn" onclick="toggleExpandAll()">Άνοιγμα όλων</button>
+    <button class="reset" onclick="resetAll()">Επαναφορά</button>
+  </div>
+</footer>
+
+<script>
+const DATA = [
+  { letter:"M", en:"Machine", el:"Μηχάνημα", items:[
+    {el:"Leak test κυκλώματος", en:"Circuit leak test", critical:true},
+    {el:"O2 flush λειτουργεί", en:"O2 flush functional", critical:true},
+    {el:"Εφεδρική φιάλη O2 γεμάτη", en:"Backup O2 cylinder full", critical:true},
+    {el:"Στάθμη vaporizers", en:"Vaporizer levels checked"},
+    {el:"APL valve / circuit ακεραιότητα", en:"APL valve / circuit integrity"},
+    {el:"Ventilator self-test περασμένο", en:"Ventilator self-test passed"},
+  ]},
+  { letter:"S", en:"Suction", el:"Αναρρόφηση", items:[
+    {el:"Αναρρόφηση λειτουργική, σωστή πίεση", en:"Suction functional, correct pressure", critical:true},
+    {el:"Yankauer έτοιμο δίπλα στον ασθενή", en:"Yankauer ready at bedside"},
+  ]},
+  { letter:"M", en:"Monitors", el:"Monitors", items:[
+    {el:"ECG / NIBP ή art line", en:"ECG / NIBP or arterial line", critical:true},
+    {el:"SpO2", en:"SpO2", critical:true},
+    {el:"EtCO2 (capnography)", en:"EtCO2 (capnography)", critical:true},
+    {el:"Θερμοκρασία", en:"Temperature"},
+    {el:"BIS/Entropy (αν ενδείκνυται)", en:"BIS/Entropy (if indicated)"},
+    {el:"Alarms ρυθμισμένα σωστά", en:"Alarm limits set correctly"},
+  ]},
+  { letter:"A", en:"Airway", el:"Αεραγωγός", items:[
+    {el:"Λαρυγγοσκόπιο: λάβες, φως OK", en:"Laryngoscope: blades, light OK", critical:true},
+    {el:"ETT × 2-3 μεγέθη, cuff test", en:"ETT ×2-3 sizes, cuff tested"},
+    {el:"LMA διαθέσιμο", en:"LMA available"},
+    {el:"Oro/nasopharyngeal airways", en:"Oro/nasopharyngeal airways"},
+    {el:"Difficult airway cart διαθέσιμο", en:"Difficult airway cart available", critical:true},
+    {el:"Videolaryngoscope / bougie / fiberoptic", en:"Videolaryngoscope / bougie / fiberoptic"},
+    {el:"Stylet, tape, επιβεβαίωση με capnography plan", en:"Stylet, tape, capnographic confirmation plan"},
+  ]},
+  { letter:"I", en:"IV / Access", el:"Φλεβική Πρόσβαση", items:[
+    {el:"Ενδοφλέβια γραμμή(ές) βατή(ές)", en:"IV cannula(s) patent", critical:true},
+    {el:"Υγρά συνδεδεμένα", en:"Fluids connected"},
+    {el:"Fluid/blood warmer αν χρειάζεται", en:"Fluid/blood warmer if needed"},
+    {el:"Central line / art line kit (αν προβλέπεται)", en:"Central/arterial line kit (if planned)"},
+  ]},
+  { letter:"D", en:"Drugs", el:"Φάρμακα", items:[
+    {el:"Induction agents έτοιμα", en:"Induction agents drawn up", critical:true},
+    {el:"Μυοχάλαση + αναστροφή", en:"Muscle relaxant + reversal", critical:true},
+    {el:"Οπιοειδή", en:"Opioids"},
+    {el:"Emergency: ατροπίνη, εφεδρίνη/φαινυλεφρίνη", en:"Emergency: atropine, ephedrine/phenylephrine", critical:true},
+    {el:"Αδρεναλίνη — αραίωση φτιαγμένη", en:"Adrenaline — dilution prepared", critical:true},
+    {el:"Lipid emulsion διαθέσιμη (LAST)", en:"Lipid emulsion available (LAST)"},
+    {el:"Αντιεμετικά", en:"Antiemetics"},
+  ]},
+  { letter:"S", en:"Special Equipment", el:"Ειδικός Εξοπλισμός", items:[
+    {el:"Απινιδωτής προσβάσιμος", en:"Defibrillator accessible", critical:true},
+    {el:"MH cart (αν high-risk)", en:"MH cart (if high-risk)"},
+    {el:"Forced-air / fluid warmer", en:"Forced-air / fluid warmer"},
+  ]},
+  { letter:"P", en:"Patient Check", el:"Έλεγχος Ασθενή", items:[
+    {el:"Ταυτοποίηση ασθενή", en:"Patient identification", critical:true},
+    {el:"Συναίνεση (consent)", en:"Consent confirmed", critical:true},
+    {el:"NPO status", en:"NPO status", critical:true},
+    {el:"Αλλεργίες ελεγμένες", en:"Allergies checked", critical:true},
+    {el:"Πρόσφατα εργαστηριακά / απεικόνιση", en:"Recent labs / imaging reviewed"},
+    {el:"Positioning εξοπλισμός έτοιμος", en:"Positioning equipment ready"},
+  ]},
+  { letter:"T", en:"Team & Plan", el:"Ομάδα & Σχέδιο", items:[
+    {el:"WHO surgical safety checklist", en:"WHO surgical safety checklist"},
+    {el:"Ρόλοι σε emergency καθορισμένοι", en:"Emergency roles assigned"},
+    {el:"Plan A/B/C αεραγωγού δηλωμένο φωναχτά (αν δύσκολος)", en:"Airway plan A/B/C stated aloud (if difficult)", critical:true},
+    {el:"Διαθεσιμότητα αίματος (αν προβλέπεται απώλεια)", en:"Blood availability (if blood loss expected)"},
+    {el:"Θερμοκρασία δωματίου / ασθενή", en:"Room / patient temperature"},
+  ]},
+];
+
+let lang = localStorage.getItem('checklist_lang') || 'el';
+let state = JSON.parse(localStorage.getItem('checklist_state') || '{}');
+let expanded = JSON.parse(localStorage.getItem('checklist_expanded') || '{}');
+
+function key(si, ii){ return si + '_' + ii; }
+
+function render(){
+  const sections = document.getElementById('sections');
+  sections.innerHTML = '';
+  let total = 0, doneCount = 0;
+
+  DATA.forEach((sec, si) => {
+    const secDiv = document.createElement('div');
+    secDiv.className = 'section' + (expanded[si] ? ' open' : '');
+
+    const secDone = sec.items.filter((_, ii) => state[key(si,ii)]).length;
+    total += sec.items.length;
+    doneCount += secDone;
+
+    const head = document.createElement('div');
+    head.className = 'section-head';
+    head.onclick = () => { expanded[si] = !expanded[si]; save(); render(); };
+    head.innerHTML = `
+      <div class="letter">${sec.letter}</div>
+      <div class="section-title">
+        <div class="name">${lang==='el'?sec.el:sec.en}</div>
+        <div class="count">${secDone} / ${sec.items.length}</div>
+      </div>
+      <div class="chevron">▶</div>`;
+    secDiv.appendChild(head);
+
+    const itemsDiv = document.createElement('div');
+    itemsDiv.className = 'items';
+    sec.items.forEach((it, ii) => {
+      const on = !!state[key(si,ii)];
+      const row = document.createElement('div');
+      row.className = 'item' + (it.critical?' critical':'') + (on?' done':'');
+      row.onclick = (e) => { state[key(si,ii)] = !on; save(); render(); };
+      row.innerHTML = `
+        <div class="check ${on?'on':''}">${on?'✓':''}</div>
+        <div class="item-text">${lang==='el'?it.el:it.en}${it.critical?`<span class="tag">${lang==='el'?'ΚΡΙΣΙΜΟ':'CRITICAL'}</span>`:''}</div>`;
+      itemsDiv.appendChild(row);
+    });
+    secDiv.appendChild(itemsDiv);
+    sections.appendChild(secDiv);
+  });
+
+  document.getElementById('progCount').textContent = `${doneCount} / ${total}`;
+  document.getElementById('progFill').style.width = total? (doneCount/total*100)+'%' : '0%';
+  document.getElementById('readyBanner').classList.toggle('show', doneCount===total && total>0);
+
+  document.getElementById('title').textContent = lang==='el' ? 'Λίστα Ελέγχου Προαναισθησίας' : 'Pre-Anaesthesia Checklist';
+  document.getElementById('subtitle').textContent = 'MSMAIDS + Extended';
+  document.getElementById('progLabel').textContent = lang==='el' ? 'Έλεγχοι' : 'Checks';
+  document.getElementById('langBtn').textContent = lang==='el' ? 'EN' : 'ΕΛ';
+  document.getElementById('expandBtn').textContent = lang==='el' ? 'Άνοιγμα όλων' : 'Expand all';
+  document.querySelector('.reset').textContent = lang==='el' ? 'Επαναφορά' : 'Reset';
+}
+
+function save(){
+  localStorage.setItem('checklist_state', JSON.stringify(state));
+  localStorage.setItem('checklist_expanded', JSON.stringify(expanded));
+  localStorage.setItem('checklist_lang', lang);
+}
+
+function toggleLang(){ lang = lang==='el' ? 'en' : 'el'; save(); render(); }
+
+function toggleExpandAll(){
+  const allOpen = DATA.every((_, si) => expanded[si]);
+  DATA.forEach((_, si) => expanded[si] = !allOpen);
+  save(); render();
+}
+
+function resetAll(){
+  const msg = lang==='el' ? 'Επαναφορά όλων των ελέγχων;' : 'Reset all checks?';
+  if(confirm(msg)){ state = {}; save(); render(); }
+}
+
+render();
+
+if('serviceWorker' in navigator){
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.register('sw.js').catch(()=>{});
+  });
+}
+</script>
+</body>
+</html>
